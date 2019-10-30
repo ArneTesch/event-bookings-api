@@ -5,8 +5,6 @@ module.exports = (req, res, next) => {
   if (!authHeader) {
     // User is not authenticated, but can access certain content
     // next function > continue application with limited access to content
-    console.log("NO AUTH HEADER2");
-
     req.isAuth = false;
     return next();
   }

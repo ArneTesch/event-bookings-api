@@ -1,6 +1,18 @@
 const Event = require("../../models/event");
 const User = require("../../models/user");
+const Dataloader = require("dataloader");
 const { dateToString } = require("../../helpers/date");
+
+const eventLoader = new Dataloader(eventIds => {
+  return events(eventIds);
+});
+
+const userLoader = new Dataloader(userIds => {
+  // find user which's id is in the array of userIds -> returns .then-able function
+  console.log(userIds);
+
+  return User.find({ _id: { $in: userIds } });
+});
 
 // manual population >> Helper functions
 const events = async eventIds => {
@@ -18,10 +30,12 @@ const events = async eventIds => {
 
 const user = async userId => {
   try {
-    const user = await User.findById(userId);
+    // id in MongoDb is an object > dataloader checks if there are equal values > Because the id's are objects,
+    // they are not seen as equal >> .toString()
+    const user = await userLoader.load(userId.toString());
     return {
       ...user._doc,
-      createdEvents: events.bind(this, user._doc.createdEvents)
+      createdEvents: () => eventLoader.loadMany(user._doc.createdEvents)
     };
   } catch (error) {
     console.error(error);
@@ -31,8 +45,9 @@ const user = async userId => {
 
 const singleEvent = async eventId => {
   try {
-    const event = await Event.findById(eventId);
-    return transformEvent(event);
+    const event = await eventLoader.load(eventId.toString());
+    // No need to transform it again, this is done in the events function by the dataloader
+    return event;
   } catch (error) {
     throw error;
   }
